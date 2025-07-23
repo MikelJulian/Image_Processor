@@ -397,14 +397,12 @@ class ImageProcessorApp:
         self.radio_overwrite_overwrite.grid(row=1, column=2, padx=5, pady=5, sticky="w")
         self.radio_overwrite_unique.grid(row=1, column=3, padx=5, pady=5, sticky="w")
 
-        # Output Folder Frame
         self.output_folder_frame.grid(row=4, column=0, columnspan=7, padx=5, pady=5, sticky="ew")
         self.output_folder_frame.grid_columnconfigure(1, weight=1) # Label should expand
         self.btn_select_output.grid(row=0, column=0, padx=5, pady=5, sticky="w")
         self.output_folder_label.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
 
-        # Controls Frame (Bottom)
         self.controls_frame.grid(row=3, column=0, padx=10, pady=10, sticky="ew")
         self.controls_frame.grid_columnconfigure(0, weight=1) # Allow button/progress to center/fill
         self.process_button.pack(pady=5) # Using pack here for simplicity of single item
@@ -417,8 +415,6 @@ class ImageProcessorApp:
 
     def _on_mousewheel(self, event):
         """Handles mouse wheel scrolling for the canvas."""
-        # For Windows/macOS, event.delta is typically 120 or -120
-        # For Linux, event.num is 4 (scroll up) or 5 (scroll down)
         if event.delta: # Windows/macOS
             self.files_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         elif event.num == 4: # Linux scroll up
@@ -449,38 +445,30 @@ class ImageProcessorApp:
 
     def _update_file_list_with_thumbnails(self):
         """Updates the list of loaded files with thumbnails in a grid layout."""
-        # Clear existing widgets
         for widget in self.files_inner_frame.winfo_children():
             widget.destroy()
         self.image_thumbnails.clear() # Clear references to allow garbage collection
 
-        # Get canvas width to determine number of columns
         self.files_canvas.update_idletasks() # Ensure canvas has rendered to get correct width
         canvas_width = self.files_canvas.winfo_width()
         if canvas_width == 0:
-            # Fallback for initial state before window is fully drawn
             canvas_width = self.files_canvas.winfo_reqwidth() or 600
         
-        # Calculate ideal number of columns
         thumbnail_area_width = self.thumbnail_display_size[0]
         padding = 10 # Padding around each item frame
-        # Approx. total width for one item including its internal padding and outer grid padding
+        
         item_total_width = thumbnail_area_width + (padding * 2) + 20 # 20 for some extra buffer
 
         num_columns = max(1, int(canvas_width / item_total_width))
         
-        # Configure columns in the inner frame to expand equally
         for i in range(num_columns):
             self.files_inner_frame.grid_columnconfigure(i, weight=1)
 
         row, col = 0, 0
         for i, path in enumerate(self.image_paths):
-            # Apply the custom style to the item_frame
             item_frame = ttk.Frame(self.files_inner_frame, relief="ridge", borderwidth=1, style="ImageItem.TFrame")
-            # Use sticky "nsew" to make the frame expand to fill its grid cell
             item_frame.grid(row=row, column=col, padx=padding, pady=padding, sticky="nsew")
             
-            # Label for the image thumbnail
             try:
                 thumbnail_pil = get_image_thumbnail(path, self.thumbnail_display_size)
                 thumbnail_tk = ImageTk.PhotoImage(thumbnail_pil)
@@ -490,22 +478,17 @@ class ImageProcessorApp:
                 img_label.pack(side="top", pady=(5,0)) # Padding at top only for image
             except Exception as e:
                 print(f"Could not generate thumbnail for {path.name}: {e}")
-                # Create a placeholder label if thumbnail generation fails
                 error_label = ttk.Label(item_frame, text="[Thumbnail Error]",
                                         width=int(self.thumbnail_display_size[0] / 8), # Approx char width
                                         anchor="center", background=self.pastel_frame_bg) # Set background
                 error_label.pack(side="top", pady=(5,0), fill="x", expand=True)
 
-            # Label for the file name
-            # Set wraplength based on thumbnail width to prevent excessive horizontal growth
-            # Ensure it's packed to fill horizontally
             file_name_label = ttk.Label(item_frame, text=path.name,
                                         wraplength=self.thumbnail_display_size[0] + 10, # Give a bit more space than image width
                                         justify="center", # Center text if wrapped
                                         anchor="n", background=self.pastel_frame_bg) # Set background
             file_name_label.pack(side="top", fill="x", expand=True, padx=2, pady=2)
 
-            # Remove button
             remove_button = ttk.Button(item_frame, text="X", command=lambda p=path: self._remove_image_from_list(p), width=3)
             remove_button.pack(side="bottom", pady=2)
 
@@ -514,21 +497,17 @@ class ImageProcessorApp:
                 col = 0
                 row += 1
         
-        # Update canvas scroll region after placing all widgets
-        self.files_inner_frame.update_idletasks() # Ensure widgets are placed before bbox calculation
+        self.files_inner_frame.update_idletasks() 
         self.files_canvas.config(scrollregion=self.files_canvas.bbox("all"))
 
 
     def _on_canvas_resize(self, event=None):
         """Called when the canvas is resized to re-render thumbnails."""
-        # Update the width of the window inside the canvas
         self.files_canvas.itemconfig(self.canvas_window_id, width=event.width)
-        # Re-render thumbnails to adjust column count
         self._update_file_list_with_thumbnails()
 
     def _on_inner_frame_configure(self, event=None):
         """Called when the inner frame changes size (e.g., content added/removed)."""
-        # Update the canvas scroll region
         self.files_canvas.configure(scrollregion=self.files_canvas.bbox("all"))
 
 
@@ -550,8 +529,6 @@ class ImageProcessorApp:
         initial_dir_str = str(self.output_folder.parent) if self.output_folder.parent.exists() else str(Path.home())
         folder_selected = filedialog.askdirectory(initialdir=initial_dir_str)
         if folder_selected:
-            # We are adding images, not clearing all when adding a new folder
-            # self._clear_loaded_images() # Removed this line
             self._add_images_from_path(Path(folder_selected))
             self.status_label.config(text=f"Added images from '{Path(folder_selected).name}'.")
             if not self.image_paths: # Check if any images were actually added
@@ -567,8 +544,6 @@ class ImageProcessorApp:
             initialdir=initial_dir_str
         )
         if file_paths:
-            # We are adding images, not clearing all when adding new files
-            # self._clear_loaded_images() # Removed this line
             added_count = 0
             for f_path in file_paths:
                 path_obj = Path(f_path)
@@ -591,15 +566,13 @@ class ImageProcessorApp:
             initialdir=initial_dir_str
         )
         if zip_path:
-            # Clear existing images before loading from ZIP
             self._clear_loaded_images() 
             self._load_zip_from_path(Path(zip_path))
 
     def _load_zip_from_path(self, zip_file_path):
         """Extracts images from a ZIP file and adds them to the list."""
-        # Ensure cleanup of previous extraction before new extraction
         self._cleanup_temp_dir() 
-        self._clear_loaded_images() # Clear app's image list
+        self._clear_loaded_images() 
 
         self.loaded_zip_path = zip_file_path
         zip_extract_dir = self.temp_extract_dir / zip_file_path.stem
@@ -611,14 +584,12 @@ class ImageProcessorApp:
                 extract_count = 0
                 for member_name in zip_ref.namelist():
                     member_path = Path(member_name)
-                    # Exclude directories and focus on supported image formats
                     if is_supported_image_format(member_path) and not member_path.is_dir():
                         try:
-                            # Construct the full extraction path carefully
                             extracted_file_path = zip_extract_dir / member_path.name
                             with open(extracted_file_path, "wb") as outfile:
                                 outfile.write(zip_ref.read(member_name))
-                            self._add_image_path(extracted_file_path) # Add the path to the UI list
+                            self._add_image_path(extracted_file_path) 
                             extract_count += 1
                         except Exception as e:
                             print(f"Error extracting '{member_name}' from ZIP: {e}")
@@ -701,7 +672,6 @@ class ImageProcessorApp:
         suffix = self.suffix_entry.get()
         overwrite_mode = self.overwrite_var.get()
 
-        # Ensure output folder exists
         if not self.output_folder.exists():
             try:
                 os.makedirs(self.output_folder)
@@ -713,7 +683,7 @@ class ImageProcessorApp:
         self.btn_select_folder.config(state=tk.DISABLED)
         self.btn_select_files.config(state=tk.DISABLED)
         self.btn_load_zip.config(state=tk.DISABLED)
-        self.btn_clear_all_images.config(state=tk.DISABLED) # Disable clear button during processing
+        self.btn_clear_all_images.config(state=tk.DISABLED) 
         self._toggle_config_widgets_state(tk.DISABLED)
 
         self.progress_bar["value"] = 0
@@ -728,13 +698,10 @@ class ImageProcessorApp:
 
     def _toggle_config_widgets_state(self, state):
         """Enables or disables configuration widgets."""
-        # Iterate over specific frames to control widgets more granularly
         for frame in [self.config_frame, self.naming_frame, self.output_folder_frame]:
             for child in frame.winfo_children():
-                # Check for ttk widgets specifically to avoid issues with tk widgets that don't have 'state'
                 if isinstance(child, (ttk.Entry, ttk.Button, ttk.Radiobutton, ttk.Scale, ttk.Label)):
                     child.config(state=state)
-        # Re-apply quality slider toggle to ensure correct state after global disable/enable
         self._toggle_quality_slider()
 
     def _process_images_thread(self, image_paths, target_size, resize_mode, output_format,
@@ -766,14 +733,11 @@ class ImageProcessorApp:
 
                 if output_filepath_base.exists():
                     if overwrite_mode == "ask":
-                        # Use a list to pass mutable state from main thread to thread
                         response_container = [None] 
-                        # Use a tk.BooleanVar to get a blocking response from the main thread
-                        # This is a common pattern for thread-safe dialogs in Tkinter.
                         response_var = tk.BooleanVar(value=False)
                         
                         def show_dialog_and_set_response():
-                            nonlocal user_cancelled # Needed to modify user_cancelled from within nested function
+                            nonlocal user_cancelled 
                             response = messagebox.askyesnocancel(
                                 "File Exists",
                                 f"The file '{output_filepath_base.name}' already exists.\n\nOverwrite it?",
@@ -783,26 +747,26 @@ class ImageProcessorApp:
                                 response_var.set(True)
                             elif response is False:
                                 response_var.set(False)
-                            else: # User cancelled
-                                user_cancelled = True # Set flag to cancel processing
-                                response_var.set(False) # Indicate no overwrite and effectively skip
+                            else: 
+                                user_cancelled = True 
+                                response_var.set(False) 
 
                         self.master.after(0, show_dialog_and_set_response)
-                        self.master.wait_variable(response_var) # Wait for the dialog to be dismissed
+                        self.master.wait_variable(response_var) 
                         
-                        if user_cancelled: # Check if the user explicitly cancelled via the dialog
+                        if user_cancelled: 
                             self.master.after(0, self.status_label.config, {"text": "Processing cancelled by user.", "foreground": "red"})
-                            break # Exit the loop
-                        elif not response_var.get(): # If response was False (No)
+                            break 
+                        elif not response_var.get(): 
                             self.master.after(0, self.status_label.config, {"text": f"Skipped: {input_path.name}", "foreground": "orange"})
-                            continue # Skip to next image
+                            continue 
 
                     elif overwrite_mode == "overwrite":
                         pass
                     elif overwrite_mode == "unique":
                         output_filepath = generate_unique_filename(output_filepath_base)
                 
-                if not user_cancelled: # Ensure processing continues only if not cancelled
+                if not user_cancelled: 
                     process_image_file(input_path, output_filepath, target_size, resize_mode, output_format, quality)
                     processed_count += 1
             except Exception as e:
@@ -824,7 +788,7 @@ class ImageProcessorApp:
         elif processed_count == total_images:
             final_status_text = f"Processing completed! Processed {processed_count} images."
             final_foreground = "green"
-        else: # Should only happen if user_cancelled or explicit break
+        else: 
             final_status_text = f"Processing interrupted. Processed {processed_count}/{total_images} images."
             final_foreground = "orange"
 
@@ -834,9 +798,8 @@ class ImageProcessorApp:
         self.master.after(0, self.btn_select_folder.config, {"state": tk.NORMAL})
         self.master.after(0, self.btn_select_files.config, {"state": tk.NORMAL})
         self.master.after(0, self.btn_load_zip.config, {"state": tk.NORMAL})
-        self.master.after(0, self.btn_clear_all_images.config, {"state": tk.NORMAL}) # Enable clear button after processing
+        self.master.after(0, self.btn_clear_all_images.config, {"state": tk.NORMAL}) 
         self.master.after(0, self._toggle_config_widgets_state, tk.NORMAL)
-        # Ensure the progress bar is at 100% or reset based on final state
         if user_cancelled or errors_occurred:
              self.master.after(0, self.progress_bar.config, {"value": processed_count / total_images * 100})
         else:
@@ -846,9 +809,6 @@ class ImageProcessorApp:
 if __name__ == "__main__":
     root = tk.Tk()
     
-    # La inicialización de la app (y por lo tanto la configuración del icono)
-    # ahora ocurre dentro del constructor de ImageProcessorApp.
-    # No es necesario duplicar el código del icono aquí.
     app = ImageProcessorApp(root)
     root.protocol("WM_DELETE_WINDOW", app.on_closing)
     root.mainloop()
